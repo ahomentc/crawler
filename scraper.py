@@ -7,6 +7,9 @@ from urllib.parse import urlparse
 from urllib.parse import urldefrag
 from urllib.parse import urljoin
 import hashlib
+from bs4 import BeautifulSoup
+
+count = 0
 
 # Holds the longest page in terms of number of words
 longest_page = 0
@@ -73,6 +76,7 @@ hashed_content = set()
 
 def scraper(url, resp):
     global num_unique_pages
+    global count
 
     status = resp.status
     error  = resp.error
@@ -85,67 +89,47 @@ def scraper(url, resp):
     parsed = urlparse(url, allow_fragments=False)
     if parsed.netloc in time_visited:
         if current_time - time_visited[parsed.netloc] < 500:
-            print("sleeping for ", (500-(current_time-time_visited[parsed.netloc])-1) * .001)
+            # print("sleeping for ", (500-(current_time-time_visited[parsed.netloc])-1) * .001)
             time.sleep((500-(current_time-time_visited[parsed.netloc])-1) * .001)
-        else:
-            print(current_time - time_visited[parsed.netloc])
     current_time = int(round(time.time() * 1000))
     time_visited[parsed.netloc] = current_time
 
     if status != 200 or (status == 200 and resp.raw_response.content == ''):
         return []
 
+    
     content = resp.raw_response.content
     html = etree.HTML(content)
     result = etree.tostring(html, pretty_print=True, method="html")
 
-    hash_object = hashlib.md5(result).hexdigest()
-    print("hash is", hash_object)
+    soup = BeautifulSoup(result)
+    for a in soup.findAll('a'):
+        del a['href']
+    hash_object = hashlib.md5(str(soup).encode('utf-8')).hexdigest()
     if hash_object in hashed_content:
         return []
     else:
         hashed_content.add(hash_object)
 
-
     links = extract_next_links(url, resp)
-    extracted_valid_links = [link for link in links if is_valid(link)]
+    count += 1
 
     ### REPORT ###
-
-    # 1. Count the number of unique pages found in the entire set
-    num_unique_pages += len(extracted_valid_links)
-    # for i in extracted_valid_links:
-    #    print(i)
-
-    # # 2. Longest page in terms of number of words
-    # global longest_page         # should not be using global??
-    # global longest_page_url
-
-    # num_words_page = count_words_page(content)
-    # if (num_words_page > longest_page):
-    #     longest_page = num_words_page
-    #     longest_page_url = url
-
-    # # 3. 50 most common words in the entire set of pages
-    # # step 1: add all stopWords to set
-    # stop_word_file = "./stop_words.txt"
-    # insert_stop_words(stop_word_file)       # need to fix this... only need to call it once
-
-    # # step 2: add all text from content to word_frequency dictionary
-    # insert_into_word_freq(content)
-    # # print_most_frequent_words(50)         # prints the n most frequent words in the entire set of pages
-    
-    # print("=================================================================")
+    print("============================")
+    print("count: ", count)
     print("url: ", url)
-    # print("status: ", status)
-    # print("num unique pages (total): ", num_unique_pages)
-    print("=================================================================\n")
-    ### END OF REPORT ###
+    print("status: ", status)
+    print("hash: ", hash_object)
+    print(result)
+    # i = 0
+    # for link in links:
+    #     i += 1
+    #     print(i, ": ", link)
+    print("============================\n")
+    ### END REPORT ###
 
-    return extracted_valid_links
+    return links
 
-
-# this should be working now
 def extract_next_links(url, resp):
     urls=[]
     content = resp.raw_response.content
