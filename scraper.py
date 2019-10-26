@@ -1,15 +1,13 @@
 import re
 import os
 import time
+import hashlib
 from lxml import etree
 from io import StringIO, BytesIO
-from urllib.parse import urlparse
-from urllib.parse import urldefrag
-from urllib.parse import urljoin
-import hashlib
 from bs4 import BeautifulSoup
-import re
+from urllib.parse import urlparse, urldefrag, urljoin
 
+# Holds the count for total number of pages scraped
 count = 0
 
 # Holds the longest page in terms of number of words
@@ -97,32 +95,26 @@ def scraper(url, resp):
 
     if status != 200 or (status == 200 and resp.raw_response.content == ''):
         return []
-
     
     content = resp.raw_response.content
     html = etree.HTML(content)
     result = etree.tostring(html, pretty_print=True, method="html")
 
+    # This is checking for duplicate pages (similar in content)
     soup = BeautifulSoup(result)
-
     [s.extract() for s in soup(['style', 'script', '[document]', 'head', 'title', 'paragraph', 'p'])]
     
     visible_text = soup.getText().replace("\n","").replace(" ","").replace("/","")
-    # visible_text = soup.getText().replace("/","")
     re.sub(r'[^\w]', '',visible_text)
-
-    # print(visible_text)
 
     hash_object = hashlib.md5(str(visible_text).encode('utf-8')).hexdigest()
     if hash_object in hashed_content:
-        print("sister is", hashed_content[hash_object])
-        print("DUPLICATE SITE", url)
+        print("DUPLICATE: ", url)
+        print("SISTER: ", hashed_content[hash_object])
+        print()
         return []
     else:
-        # hashed_content.add(hash_object)
         hashed_content[hash_object] = url
-
-    print("hash: ", hash_object)
 
     links = extract_next_links(url, resp)
     count += 1
@@ -132,12 +124,7 @@ def scraper(url, resp):
     print("count: ", count)
     print("url: ", url)
     print("status: ", status)
-    # print(str(soup))
-    # print(result)
-    # i = 0
-    # for link in links:
-    #     i += 1
-    #     print(i, ": ", link)
+    print("hash: ", hash_object)
     print("============================\n")
     ### END REPORT ###
 
