@@ -8,6 +8,7 @@ from urllib.parse import urldefrag
 from urllib.parse import urljoin
 import hashlib
 from bs4 import BeautifulSoup
+import re
 
 count = 0
 
@@ -106,7 +107,11 @@ def scraper(url, resp):
 
     [s.extract() for s in soup(['style', 'script', '[document]', 'head', 'title', 'paragraph', 'p'])]
     
-    visible_text = soup.getText()
+    visible_text = soup.getText().replace("\n","").replace(" ","").replace("/","")
+    # visible_text = soup.getText().replace("/","")
+    re.sub(r'[^\w]', '',visible_text)
+
+    # print(visible_text)
 
     hash_object = hashlib.md5(str(visible_text).encode('utf-8')).hexdigest()
     if hash_object in hashed_content:
