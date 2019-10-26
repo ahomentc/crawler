@@ -2,6 +2,7 @@ import re
 import os
 import time
 import hashlib
+import tldextract
 from lxml import etree
 from io import StringIO, BytesIO
 from bs4 import BeautifulSoup
@@ -81,18 +82,6 @@ def scraper(url, resp):
     error  = resp.error
     url    = resp.url
 
-    # Politeness. Check if diff is less than 500 miliseconds.
-    # This is wrong though. It should just have a delay of 500 miliseconds.
-    # Where to put this delay though? In this file??
-    # current_time = int(round(time.time() * 1000))
-    # parsed = urlparse(url, allow_fragments=False)
-    # if parsed.netloc in time_visited:
-    #     if current_time - time_visited[parsed.netloc] < 500:
-    #         # print("sleeping for ", (500-(current_time-time_visited[parsed.netloc])-1) * .001)
-    #         time.sleep((500-(current_time-time_visited[parsed.netloc])-1) * .001)
-    # current_time = int(round(time.time() * 1000))
-    # time_visited[parsed.netloc] = current_time
-
     if status != 200 or (status == 200 and resp.raw_response.content == ''):
         return []
     
@@ -101,7 +90,7 @@ def scraper(url, resp):
     result = etree.tostring(html, pretty_print=True, method="html")
 
     # This is checking for duplicate pages (similar in content)
-    soup = BeautifulSoup(result)
+    soup = BeautifulSoup(result, features="lxml")
     [s.extract() for s in soup(['style', 'script', '[document]', 'head', 'title', 'paragraph', 'p'])]
     
     visible_text = soup.getText().replace("\n","").replace(" ","").replace("/","")
@@ -109,6 +98,7 @@ def scraper(url, resp):
 
     hash_object = hashlib.md5(str(visible_text).encode('utf-8')).hexdigest()
     if hash_object in hashed_content:
+        print()
         print("DUPLICATE: ", url)
         print("SISTER: ", hashed_content[hash_object])
         print()
@@ -140,29 +130,66 @@ def extract_next_links(url, resp):
         href_normalized = urljoin(url, href, allow_fragments=False)
         # removes extension
         href_normalized_no_extension = os.path.splitext(href_normalized)[0]
-        if (is_valid(href_normalized) and is_valid(href_normalized_no_extension)):
-            if href_normalized_no_extension not in visited:
+        if href_normalized_no_extension not in visited:
+            if (is_valid(href_normalized) and is_valid(href_normalized_no_extension)):
                 urls.append(href_normalized_no_extension)
                 visited.add(href_normalized_no_extension)
+                # print("ADDING URL: ", href_normalized_no_extension)
+            else:
+                # print("NOT VALID: ", href_normalized_no_extension)
+                pass
+        else:
+            # print("ALREADY SEEN: ", href_normalized_no_extension)
+            pass
+        # print('--------------------')
     return urls
 
 
 def is_valid(url):
     try:
+        # print("VALIDATING URL: ")
         parsed = urlparse(url, allow_fragments=False)
-        if parsed.netloc not in set(["www.informatics.uci.edu", "www.ics.uci.edu", "www.cs.uci.edu", "www.stat.uci.edu", "www.today.uci.edu/department/information_computer_sciences"]) or parsed.netloc == "www.archive.ics.uci.edu":
-            return False
-        if parsed.scheme not in set(["http", "https"]):
-            return False
-        return not re.match(
-            r".*\.(css|js|bmp|gif|jpe?g|ico"
-            + r"|png|tiff?|mid|mp2|mp3|mp4"
-            + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
-            + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
-            + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
-            + r"|epub|dll|cnf|tgz|sha1"
-            + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+
+        extracted_url = tldextract.extract(url)
+        subdomain = extracted_url[0]
+        domain = extracted_url[1]
+        suffix = extracted_url[2]
+        # print("subdomain: ", subdomain)
+        # print("domain: ", domain)
+        # print("suffix: ", suffix)
+
+        allowed_subdomains = ["ics", "cs", "stat", "informatics"]
+        for sd in allowed_subdomains:
+            if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu")) or parsed.netloc == "www.archive.ics.uci.edu":
+                if parsed.scheme not in set(["http", "https"]):
+                    return False
+                else:
+                    return not re.match(
+                        r".*\.(css|js|bmp|gif|jpe?g|ico"
+                        + r"|png|tiff?|mid|mp2|mp3|mp4"
+                        + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
+                        + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
+                        + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
+                        + r"|epub|dll|cnf|tgz|sha1"
+                        + r"|thmx|mso|arff|rtf|jar|csv"
+                        + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", url)
+
+        return False
+
+
+        # if parsed.netloc not in set(["www.informatics.uci.edu", "www.ics.uci.edu", "www.cs.uci.edu", "www.stat.uci.edu", "www.today.uci.edu/department/information_computer_sciences"]) or parsed.netloc == "www.archive.ics.uci.edu":
+        #     return False
+        # if parsed.scheme not in set(["http", "https"]):
+        #     return False
+        # return not re.match(
+        #     r".*\.(css|js|bmp|gif|jpe?g|ico"
+        #     + r"|png|tiff?|mid|mp2|mp3|mp4"
+        #     + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
+        #     + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
+        #     + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
+        #     + r"|epub|dll|cnf|tgz|sha1"
+        #     + r"|thmx|mso|arff|rtf|jar|csv"
+        #     + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
 
     except TypeError:
         print ("TypeError for ", parsed)
