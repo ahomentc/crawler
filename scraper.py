@@ -134,6 +134,7 @@ def extract_next_links(url, resp):
             if (is_valid(href_normalized) and is_valid(href_normalized_no_extension)):
                 urls.append(href_normalized_no_extension)
                 visited.add(href_normalized_no_extension)
+                print("ADDING: ", href_normalized_no_extension)
     return urls
 
 
@@ -148,7 +149,7 @@ def is_valid(url):
 
         allowed_subdomains = ["ics", "cs", "stat", "informatics"]
         for sd in allowed_subdomains:
-            if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu")) or parsed.netloc != "www.archive.ics.uci.edu":
+            if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu") and (parsed.netloc != "www.archive.ics.uci.edu")):
                 if parsed.scheme not in set(["http", "https"]):
                     return False
                 else:
