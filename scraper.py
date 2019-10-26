@@ -72,7 +72,7 @@ def insert_into_word_freq(content):
 def count_words_page(content):
     return len(extract_all_words(content))
 
-hashed_content = set()
+hashed_content = dict()
 
 def scraper(url, resp):
     global num_unique_pages
@@ -85,14 +85,14 @@ def scraper(url, resp):
     # Politeness. Check if diff is less than 500 miliseconds.
     # This is wrong though. It should just have a delay of 500 miliseconds.
     # Where to put this delay though? In this file??
-    current_time = int(round(time.time() * 1000))
-    parsed = urlparse(url, allow_fragments=False)
-    if parsed.netloc in time_visited:
-        if current_time - time_visited[parsed.netloc] < 500:
-            # print("sleeping for ", (500-(current_time-time_visited[parsed.netloc])-1) * .001)
-            time.sleep((500-(current_time-time_visited[parsed.netloc])-1) * .001)
-    current_time = int(round(time.time() * 1000))
-    time_visited[parsed.netloc] = current_time
+    # current_time = int(round(time.time() * 1000))
+    # parsed = urlparse(url, allow_fragments=False)
+    # if parsed.netloc in time_visited:
+    #     if current_time - time_visited[parsed.netloc] < 500:
+    #         # print("sleeping for ", (500-(current_time-time_visited[parsed.netloc])-1) * .001)
+    #         time.sleep((500-(current_time-time_visited[parsed.netloc])-1) * .001)
+    # current_time = int(round(time.time() * 1000))
+    # time_visited[parsed.netloc] = current_time
 
     if status != 200 or (status == 200 and resp.raw_response.content == ''):
         return []
@@ -103,13 +103,21 @@ def scraper(url, resp):
     result = etree.tostring(html, pretty_print=True, method="html")
 
     soup = BeautifulSoup(result)
-    for a in soup.findAll('a'):
-        del a['href']
-    hash_object = hashlib.md5(str(soup).encode('utf-8')).hexdigest()
+
+    [s.extract() for s in soup(['style', 'script', '[document]', 'head', 'title', 'paragraph', 'p'])]
+    
+    visible_text = soup.getText()
+
+    hash_object = hashlib.md5(str(visible_text).encode('utf-8')).hexdigest()
     if hash_object in hashed_content:
+        print("sister is", hashed_content[hash_object])
+        print("DUPLICATE SITE", url)
         return []
     else:
-        hashed_content.add(hash_object)
+        # hashed_content.add(hash_object)
+        hashed_content[hash_object] = url
+
+    print("hash: ", hash_object)
 
     links = extract_next_links(url, resp)
     count += 1
@@ -119,8 +127,8 @@ def scraper(url, resp):
     print("count: ", count)
     print("url: ", url)
     print("status: ", status)
-    print("hash: ", hash_object)
-    print(result)
+    # print(str(soup))
+    # print(result)
     # i = 0
     # for link in links:
     #     i += 1
