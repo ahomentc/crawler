@@ -134,33 +134,21 @@ def extract_next_links(url, resp):
             if (is_valid(href_normalized) and is_valid(href_normalized_no_extension)):
                 urls.append(href_normalized_no_extension)
                 visited.add(href_normalized_no_extension)
-                # print("ADDING URL: ", href_normalized_no_extension)
-            else:
-                # print("NOT VALID: ", href_normalized_no_extension)
-                pass
-        else:
-            # print("ALREADY SEEN: ", href_normalized_no_extension)
-            pass
-        # print('--------------------')
     return urls
 
 
 def is_valid(url):
     try:
-        # print("VALIDATING URL: ")
         parsed = urlparse(url, allow_fragments=False)
 
         extracted_url = tldextract.extract(url)
         subdomain = extracted_url[0]
         domain = extracted_url[1]
         suffix = extracted_url[2]
-        # print("subdomain: ", subdomain)
-        # print("domain: ", domain)
-        # print("suffix: ", suffix)
 
         allowed_subdomains = ["ics", "cs", "stat", "informatics"]
         for sd in allowed_subdomains:
-            if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu")) or parsed.netloc == "www.archive.ics.uci.edu":
+            if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu")) or parsed.netloc != "www.archive.ics.uci.edu":
                 if parsed.scheme not in set(["http", "https"]):
                     return False
                 else:
@@ -175,7 +163,6 @@ def is_valid(url):
                         + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", url)
 
         return False
-
 
         # if parsed.netloc not in set(["www.informatics.uci.edu", "www.ics.uci.edu", "www.cs.uci.edu", "www.stat.uci.edu", "www.today.uci.edu/department/information_computer_sciences"]) or parsed.netloc == "www.archive.ics.uci.edu":
         #     return False
