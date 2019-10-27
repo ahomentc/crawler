@@ -10,7 +10,7 @@ def download(url, config, logger=None):
     # changed this
     # got it from Piazza
     while True:
-        if count == 3:
+        if count >= 3:
             return False
         try:
             resp = requests.get(

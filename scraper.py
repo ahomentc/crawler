@@ -3,10 +3,11 @@ import os
 import time
 import hashlib
 import tldextract
+import operator
 from lxml import etree
 from io import StringIO, BytesIO
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urldefrag, urljoin
+from urllib.parse import urlparse, urldefrag, urljoin, urlunsplit
 
 # Holds the count for total number of pages scraped
 num_unique_pages = 0
@@ -23,9 +24,27 @@ hashed_content = dict()
 # Holds all the stop words
 stop_words = set()
 
+# Holds all the subdomains found from scraping
+ics_sub_domains = dict()
+
 # Inserts all stop words into a set
 for line in open("stop_words.txt"):
     stop_words.add(line.rstrip())
+
+# Finds the number of subdomains and the number of unique pages
+def find_sub_domains(valid_links):
+    for link in valid_links:
+        extracted_url = tldextract.extract(link)
+        subdomain = extracted_url[0]
+        if (subdomain.find(".ics") >= 0 and subdomain != "www.ics"):
+            parsed = urlparse(link, allow_fragments=False)
+            parsed_sd = parsed[1]
+            if parsed_sd not in ics_sub_domains:
+                ics_sub_domains[parsed_sd] = 1
+            else:
+                ics_sub_domains[parsed_sd] += 1
+
+    # print(ics_sub_domains)
 
 def scraper(url, resp):
     status = resp.status
@@ -36,9 +55,12 @@ def scraper(url, resp):
     if status != 200 or (status == 200 and resp.raw_response.content == ''):
         return []
     
-    content = resp.raw_response.content
-    html = etree.HTML(content)
-    result = etree.tostring(html, pretty_print=True, method="html")
+    try:
+        content = resp.raw_response.content
+        html = etree.HTML(content)
+        result = etree.tostring(html, pretty_print=True, method="html")
+    except:
+        return []
 
     # Extract only valid links from url
     valid_links = check_for_duplicates(url, resp, result)
@@ -47,9 +69,13 @@ def scraper(url, resp):
     global num_unique_pages
     num_unique_pages += 1
 
+    # Finds all subdomains in ics.uci.edu
+    find_sub_domains(valid_links)
+
     print("============================")
     print("status: ", status)
     print("url: ", url)
+    print("most common ics subdomain: ", max(ics_sub_domains.items(), key=operator.itemgetter(1))[0], max(ics_sub_domains.items(), key=operator.itemgetter(1))[1])
     print("total unique pages found: ", num_unique_pages)
     print("Adding: {} urls".format(len(valid_links)))
     print("============================\n")
@@ -106,7 +132,7 @@ def is_valid(url):
         domain = extracted_url[1]
         suffix = extracted_url[2]
 
-        allowed_subdomains = ["ics", "cs", "stat", "informatics"]
+        allowed_subdomains = [".ics", ".cs", ".stat", "informatics"]
         for sd in allowed_subdomains:
             if (subdomain.find("archive.ics") >= 0):
                 return False
