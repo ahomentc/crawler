@@ -7,6 +7,7 @@ import operator
 from lxml import etree
 from io import StringIO, BytesIO
 from bs4 import BeautifulSoup
+from bs4.element import Comment
 from urllib.parse import urlparse, urldefrag, urljoin, urlunsplit
 
 # Holds the count for total number of pages scraped
@@ -27,6 +28,9 @@ stop_words = set()
 # Holds all the subdomains found from scraping
 ics_sub_domains = dict()
 
+# Holds the word count
+word_count = dict()
+
 # Inserts all stop words into a set
 for line in open("stop_words.txt"):
     stop_words.add(line.rstrip())
@@ -41,10 +45,44 @@ def find_sub_domains(valid_links):
             parsed_sd = parsed[1]
             if parsed_sd not in ics_sub_domains:
                 ics_sub_domains[parsed_sd] = 1
+                isd = open("ics_subdomains.txt", "a")
+                isd.write(parsed_sd+"\n")
+                isd.close()
             else:
                 ics_sub_domains[parsed_sd] += 1
-
     # print(ics_sub_domains)
+
+# Gets all visible text from html
+def get_text(element):
+    if element.parent.name in ["[document]", "noscript", "header", "html", "meta", "head", "input", "script", "style"]:
+        return False
+    if isinstance(element, Comment):
+        return False
+    return True
+
+
+def text_from_html(result):
+    soup = BeautifulSoup(result, features="html.parser")
+    all_text = soup.findAll(text=True)
+    visible_texts = filter(get_text, all_text)
+    text = u" ".join(t.strip() for t in visible_texts)
+
+    for t in text.split():
+        pattern = re.findall('[a-zA-Z0-9_]+', t.lower(), re.ASCII)
+        if len(pattern) > 0:
+            if pattern[0] not in stop_words:
+                if pattern[0] not in word_count:
+                    word_count[pattern[0]] = 1
+                else:
+                    word_count[pattern[0]] += 1
+
+def print_word_count():
+    count = 1
+    for k,v in sorted(word_count.items(), key=lambda x: (-x[1], x[0])):
+        if count == 11:
+            break
+        print(count, k, v)
+        count += 1
 
 def scraper(url, resp):
     status = resp.status
@@ -65,6 +103,9 @@ def scraper(url, resp):
     # Extract only valid links from url
     valid_links = check_for_duplicates(url, resp, result)
 
+    # Extract only valid text from url
+    text_from_html(result)
+
     ### REPORT ###
     global num_unique_pages
     num_unique_pages += 1
@@ -78,6 +119,8 @@ def scraper(url, resp):
     print("most common ics subdomain: ", max(ics_sub_domains.items(), key=operator.itemgetter(1))[0], max(ics_sub_domains.items(), key=operator.itemgetter(1))[1])
     print("total unique pages found: ", num_unique_pages)
     print("Adding: {} urls".format(len(valid_links)))
+    print("Word Count: ")
+    print_word_count()
     print("============================\n")
     ### END REPORT ###
 
