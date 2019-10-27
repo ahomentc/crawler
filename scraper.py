@@ -46,7 +46,7 @@ def scraper(url, resp):
     ### REPORT ###
     global num_unique_pages
     num_unique_pages += 1
-    
+
     print("============================")
     print("status: ", status)
     print("url: ", url)
@@ -108,7 +108,7 @@ def is_valid(url):
 
         allowed_subdomains = ["ics", "cs", "stat", "informatics"]
         for sd in allowed_subdomains:
-            if (parsed.netloc == "www.archive.ics.uci.edu"):
+            if (subdomain.find("archive.ics") >= 0):
                 return False
             if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu")):
                 if parsed.scheme not in set(["http", "https"]):
