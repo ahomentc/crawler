@@ -16,7 +16,7 @@ def download(url, config, logger=None):
             resp = requests.get(
                 f"http://{host}:{port}/",
                 params=[("q", f"{url}"), ("u", f"{config.user_agent}")],
-                timeout=(5,15))
+                timeout=(5,30))
             break
         except:
             print("waiting...", count, "(",url,")")
