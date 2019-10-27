@@ -7,17 +7,19 @@ from utils.response import Response
 def download(url, config, logger=None):
     host, port = config.cache_server
     count = 1
+    # changed this
+    # got it from Piazza
     while True:
-        print("waiting...", count, "(",url,")")
         if count == 3:
             return False
         try:
             resp = requests.get(
                 f"http://{host}:{port}/",
                 params=[("q", f"{url}"), ("u", f"{config.user_agent}")],
-                timeout=(5,60))
+                timeout=(5,15))
             break
         except:
+            print("waiting...", count, "(",url,")")
             count += 1
             continue
     if resp:

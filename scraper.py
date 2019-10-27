@@ -9,20 +9,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urldefrag, urljoin
 
 # Holds the count for total number of pages scraped
-count = 0
-
-# Holds the longest page in terms of number of words
-longest_page = 0
-longest_page_url = ""
-
-# Holds the number of unqiue pages found
 num_unique_pages = 0
-
-# Set containing all English stopWords
-stop_words = set()
-
-# Dictionary containing frequency of all words found
-word_frequency = dict()
 
 # Check to see if the link's been visited before
 visited = set()
@@ -30,58 +17,22 @@ visited = set()
 # Dictionary containing the last time visited of each link
 time_visited = dict()
 
-# Inserts all stopWords into a set
-def insert_stop_words(file):
-    for line in open(file):
-        stop_words.add(line.rstrip())
-
-# still need to tweak this!
-# Extracts all "valid" words from a page and puts it in a list
-def extract_all_words(content):
-    html = etree.HTML(content)
-    words = html.xpath("//text()")
-    stripped_words = [word.rstrip().strip() for word in words]
-    word_list = list(filter(None, stripped_words))
-
-    all_words = list()
-    for word in word_list:
-        if (len(word) > 0):
-            pattern = re.findall("[a-zA-Z0-9_]+", word.lower(), re.ASCII)
-            all_words.extend(pattern)
-    return all_words
-
-# Prints the n most frequent words found in all pages
-def print_most_frequent_words(n):
-    i = 1
-    for k,v in sorted(word_frequency.items(), key=lambda x: (x[1], x[0]), reverse=True):
-        print(f"{i}: {k} -> {v}")
-        i += 1
-        if (i == n+1):
-            break
-
-# Inserts all text found in page to word_frequency dictionary
-def insert_into_word_freq(content):
-    all_words = extract_all_words(content)
-    for word in all_words:
-        if word not in word_frequency:
-            word_frequency[word] = 1
-        else:
-            word_frequency[word] += 1
-
-# Returns the number of words in a page
-def count_words_page(content):
-    return len(extract_all_words(content))
-
+# Dictionary containing the hash objects of certain pages
 hashed_content = dict()
 
-def scraper(url, resp):
-    global num_unique_pages
-    global count
+# Holds all the stop words
+stop_words = set()
 
+# Inserts all stop words into a set
+for line in open("stop_words.txt"):
+    stop_words.add(line.rstrip())
+
+def scraper(url, resp):
     status = resp.status
     error  = resp.error
     url    = resp.url
 
+    # Ignore urls that don't have a status code of 200 or have no content
     if status != 200 or (status == 200 and resp.raw_response.content == ''):
         return []
     
@@ -89,36 +40,47 @@ def scraper(url, resp):
     html = etree.HTML(content)
     result = etree.tostring(html, pretty_print=True, method="html")
 
-    # This is checking for duplicate pages (similar in content)
+    # Extract only valid links from url
+    valid_links = check_for_duplicates(url, resp, result)
+
+    ### REPORT ###
+    global num_unique_pages
+    num_unique_pages += 1
+    
+    print("============================")
+    print("status: ", status)
+    print("url: ", url)
+    print("total unique pages found: ", num_unique_pages)
+    print("Adding: {} urls".format(len(valid_links)))
+    print("============================\n")
+    ### END REPORT ###
+
+    return valid_links
+
+# Scrapes link for text and other links:
+#   if the current page is similar to another page that has already been scraped,
+#   that page is useless so don't do anything
+def check_for_duplicates(url, resp, result):
+    # Initialize bs4 and get data from these tags
     soup = BeautifulSoup(result, features="lxml")
     [s.extract() for s in soup(['style', 'script', '[document]', 'head', 'title', 'paragraph', 'p'])]
-    
+
+    # Get text from the specified tags
     visible_text = soup.getText().replace("\n","").replace(" ","").replace("/","")
     re.sub(r'[^\w]', '',visible_text)
 
+    # Hashing function to find duplicate sites
     hash_object = hashlib.md5(str(visible_text).encode('utf-8')).hexdigest()
     if hash_object in hashed_content:
-        print()
-        print("DUPLICATE: ", url)
-        print("SISTER: ", hashed_content[hash_object])
-        print()
+        print("\nFOUND DUPLICATE: url(", url, ")")
+        print("SISTER: url(", hashed_content[hash_object],")")
         return []
     else:
         hashed_content[hash_object] = url
 
     links = extract_next_links(url, resp)
-    count += 1
-
-    ### REPORT ###
-    print("============================")
-    print("count: ", count)
-    print("url: ", url)
-    print("status: ", status)
-    print("hash: ", hash_object)
-    print("============================\n")
-    ### END REPORT ###
-
     return links
+
 
 def extract_next_links(url, resp):
     urls=[]
@@ -126,15 +88,12 @@ def extract_next_links(url, resp):
     html = etree.HTML(content)
     for href in html.xpath('//a/@href'):
         href = urldefrag(href)[0]
-        # normalizes URL and converts relative -> absolute
-        href_normalized = urljoin(url, href, allow_fragments=False)
-        # removes extension
-        href_normalized_no_extension = os.path.splitext(href_normalized)[0]
+        href_normalized = urljoin(url, href, allow_fragments=False) # normalizes URL and converts relative -> absolute
+        href_normalized_no_extension = os.path.splitext(href_normalized)[0] # removes extension
         if href_normalized_no_extension not in visited:
             if (is_valid(href_normalized) and is_valid(href_normalized_no_extension)):
                 urls.append(href_normalized_no_extension)
                 visited.add(href_normalized_no_extension)
-                print("ADDING: ", href_normalized_no_extension)
     return urls
 
 
@@ -149,7 +108,9 @@ def is_valid(url):
 
         allowed_subdomains = ["ics", "cs", "stat", "informatics"]
         for sd in allowed_subdomains:
-            if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu") and (parsed.netloc != "www.archive.ics.uci.edu")):
+            if (parsed.netloc == "www.archive.ics.uci.edu"):
+                return False
+            if ((subdomain.find(sd) >= 0) and (domain == "uci") and (suffix == "edu")):
                 if parsed.scheme not in set(["http", "https"]):
                     return False
                 else:
@@ -162,22 +123,7 @@ def is_valid(url):
                         + r"|epub|dll|cnf|tgz|sha1"
                         + r"|thmx|mso|arff|rtf|jar|csv"
                         + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", url)
-
         return False
-
-        # if parsed.netloc not in set(["www.informatics.uci.edu", "www.ics.uci.edu", "www.cs.uci.edu", "www.stat.uci.edu", "www.today.uci.edu/department/information_computer_sciences"]) or parsed.netloc == "www.archive.ics.uci.edu":
-        #     return False
-        # if parsed.scheme not in set(["http", "https"]):
-        #     return False
-        # return not re.match(
-        #     r".*\.(css|js|bmp|gif|jpe?g|ico"
-        #     + r"|png|tiff?|mid|mp2|mp3|mp4"
-        #     + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
-        #     + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
-        #     + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
-        #     + r"|epub|dll|cnf|tgz|sha1"
-        #     + r"|thmx|mso|arff|rtf|jar|csv"
-        #     + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
 
     except TypeError:
         print ("TypeError for ", parsed)
