@@ -31,6 +31,9 @@ ics_sub_domains = dict()
 # Holds the word count
 word_count = dict()
 
+longest_word_count = 0
+longest_word_count_url = ""
+
 # Inserts all stop words into a set
 for line in open("stop_words.txt"):
     stop_words.add(line.rstrip())
@@ -61,13 +64,15 @@ def get_text(element):
     return True
 
 
-def text_from_html(result):
+def text_from_html(result, url):
     soup = BeautifulSoup(result, features="html.parser")
     all_text = soup.findAll(text=True)
     visible_texts = filter(get_text, all_text)
     text = u" ".join(t.strip() for t in visible_texts)
+    num_words = 0
 
     for t in text.split():
+        num_words+=1
         pattern = re.findall('[a-zA-Z0-9_]+', t.lower(), re.ASCII)
         if len(pattern) > 0:
             if pattern[0] not in stop_words:
@@ -75,6 +80,10 @@ def text_from_html(result):
                     word_count[pattern[0]] = 1
                 else:
                     word_count[pattern[0]] += 1
+
+    if num_words > longest_word_count:
+        longest_word_count = num_words
+        longest_word_count_url = url
 
 def print_word_count():
     count = 1
@@ -104,7 +113,7 @@ def scraper(url, resp):
     valid_links = check_for_duplicates(url, resp, result)
 
     # Extract only valid text from url
-    text_from_html(result)
+    text_from_html(result, url)
 
     ### REPORT ###
     global num_unique_pages
@@ -119,6 +128,7 @@ def scraper(url, resp):
     print("most common ics subdomain: ", max(ics_sub_domains.items(), key=operator.itemgetter(1))[0], max(ics_sub_domains.items(), key=operator.itemgetter(1))[1])
     print("total unique pages found: ", num_unique_pages)
     print("Adding: {} urls".format(len(valid_links)))
+    print("Longest Word Count URL: ", longest_word_count_url, " with count ", longest_word_count)
     print("Word Count: ")
     print_word_count()
     print("============================\n")
