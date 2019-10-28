@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 from bs4.element import Comment
 from urllib.parse import urlparse, urldefrag, urljoin, urlunsplit
 
+count = 0
+
 # Holds the count for total number of pages scraped
 num_unique_pages = 0
 
@@ -48,9 +50,9 @@ def find_sub_domains(valid_links):
             parsed_sd = parsed[1]
             if parsed_sd not in ics_sub_domains:
                 ics_sub_domains[parsed_sd] = 1
-                isd = open("ics_subdomains.txt", "a")
-                isd.write(parsed_sd+"\n")
-                isd.close()
+                #isd = open("ics_subdomains.txt", "a")
+                #isd.write(parsed_sd+"\n")
+                #isd.close()
             else:
                 ics_sub_domains[parsed_sd] += 1
     # print(ics_sub_domains)
@@ -65,6 +67,9 @@ def get_text(element):
 
 
 def text_from_html(result, url):
+    global longest_word_count
+    global longest_word_count_url
+
     soup = BeautifulSoup(result, features="html.parser")
     all_text = soup.findAll(text=True)
     visible_texts = filter(get_text, all_text)
@@ -88,10 +93,15 @@ def text_from_html(result, url):
 def print_word_count():
     count = 1
     for k,v in sorted(word_count.items(), key=lambda x: (-x[1], x[0])):
-        if count == 11:
+        if count == 51:
             break
         print(count, k, v)
         count += 1
+
+def print_sub_domains():
+    for k,v in sorted(ics_sub_domains.items(), key=lambda x: (x[0],x[1])):
+        print(k, v)
+
 
 def scraper(url, resp):
     status = resp.status
@@ -125,12 +135,15 @@ def scraper(url, resp):
     print("============================")
     print("status: ", status)
     print("url: ", url)
-    print("most common ics subdomain: ", max(ics_sub_domains.items(), key=operator.itemgetter(1))[0], max(ics_sub_domains.items(), key=operator.itemgetter(1))[1])
     print("total unique pages found: ", num_unique_pages)
     print("Adding: {} urls".format(len(valid_links)))
     print("Longest Word Count URL: ", longest_word_count_url, " with count ", longest_word_count)
+    
     print("Word Count: ")
     print_word_count()
+    print("most common ics subdomain: ", max(ics_sub_domains.items(), key=operator.itemgetter(1))[0], max(ics_sub_domains.items(), key=operator.itemgetter(1))[1])
+    print_sub_domains()
+    print(num_unique_pages)
     print("============================\n")
     ### END REPORT ###
 
