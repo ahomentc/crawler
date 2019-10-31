@@ -102,6 +102,18 @@ def print_sub_domains():
     for k,v in sorted(ics_sub_domains.items(), key=lambda x: (x[0],x[1])):
         print(k, v)
 
+def word_count_to_file(f):
+    count = 1
+    for k,v in sorted(word_count.items(), key=lambda x: (-x[1], x[0])):
+        if count == 51:
+            break
+        f.write(str(count) + " " + str(k) + " " + str(v)  + "\n")
+        count += 1
+
+def sub_domains_to_file(f):
+    for k,v in sorted(ics_sub_domains.items(), key=lambda x: (x[0],x[1])):
+        f.write(str(k) + " " + str(v) + "\n")
+
 
 def scraper(url, resp):
     status = resp.status
@@ -131,6 +143,26 @@ def scraper(url, resp):
 
     # Finds all subdomains in ics.uci.edu
     find_sub_domains(valid_links)
+
+    f = open("output.txt","w")
+    f.write("Status: ")
+    f.write(str(status) + "\n")
+    f.write("Url: ")
+    f.write(url + "\n")
+    f.write("total unique pages found: ")
+    f.write(str(num_unique_pages) + "\n")
+    f.write("Adding: {} urls \n".format(len(valid_links)))
+    f.write("Longest Word Count URL: ")
+    f.write(longest_word_count_url)
+    f.write(" with count ")
+    f.write(str(longest_word_count) + "\n")
+    f.write("Word Count: \n")
+    word_count_to_file(f)
+    most_common_sub = max(ics_sub_domains.items(), key=operator.itemgetter(1))[0], max(ics_sub_domains.items(), key=operator.itemgetter(1))[1]
+    f.write("most common ics subdomain: " + str(most_common_sub))
+    sub_domains_to_file(f)
+    f.write("Num unique pages: " + str(num_unique_pages)  + "\n")
+    f.close()
 
     print("============================")
     print("status: ", status)

@@ -1,0 +1,58 @@
+Status: 200
+Url: https://www.stat.uci.edu/multidepartmental-collaboration-on-detecting-code-clones-leads-to-distinguished-paper-award
+total unique pages found: 12
+Adding: 3 urls 
+Longest Word Count URL: https://www.stat.uci.edu/trio-of-ics-professors-preview-tech-trends-for-2019 with count 2372
+Word Count: 
+1 statistics 140
+2 2019 97
+3 data 68
+4 center 64
+5 statistical 64
+6 department 49
+7 news 49
+8 uci 46
+9 will 46
+10 science 44
+11 computer 42
+12 professor 40
+13 stern 38
+14 school 37
+15 august 36
+16 graduate 35
+17 sciences 34
+18 students 34
+19 bren 32
+20 donald 32
+21 faculty 32
+22 hal 29
+23 opportunities 29
+24 brain 28
+25 people 28
+26 current 27
+27 work 27
+28 7 26
+29 ph 26
+30 conte 25
+31 course 25
+32 help 25
+33 seminars 25
+34 analysis 24
+35 degrees 24
+36 directory 24
+37 listings 24
+38 guindani 23
+39 consulting 22
+40 development 21
+41 early 21
+42 complex 20
+43 continue 20
+44 grant 20
+45 ics 20
+46 systems 20
+47 awarded 19
+48 explore 19
+49 nsf 19
+50 arora 18
+most common ics subdomain: ('statconsulting.ics.uci.edu', 5)statconsulting.ics.uci.edu 5
+Num unique pages: 12
